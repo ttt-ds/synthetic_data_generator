@@ -2,10 +2,31 @@ import pandas as pd
 import numpy as np
 from typing import Tuple, Dict, List, Union
 import string
+import time
 import random
+from varname import varname
 
 
-class NumRowGenerator:
+class Functionality:
+    def __init__(self):
+        self.methods = {}
+
+    def update(self, value):
+        name = value.__name__.lower().replace('generator', '')
+        if name not in self.methods.keys():
+            self.methods[name] = value
+
+
+generators = Functionality()
+
+
+def register(new_class):
+    generators.update(new_class)
+    return new_class
+
+
+@register
+class NumericalGenerator:
     def __init__(self, low, high, size=1):
         self.low = low
         self.high = high
@@ -15,7 +36,8 @@ class NumRowGenerator:
         return np.random.randint(low=self.low, high=self.high, size=self.size).tolist()
 
 
-class CatRowGenerator:
+@register
+class CategoricalGenerator:
     def __init__(self, categories, size=1):
         self.categories = categories
         self.size = size
@@ -24,31 +46,60 @@ class CatRowGenerator:
         return np.random.choice(a=self.categories, size=self.size).tolist()
 
 
-class WordGenerator:
-    def __init__(self, size, word_len: Union[str, int] = 'random'):
+@register
+class RowGenerator:
+    def __init__(self, size):
         self.size = size
-        self.word_len = word_len
+
+    def make_row(self, function, **kwargs):
+        return [function(**kwargs) for _ in range(self.size)]
+
+
+@register
+class DatetimeGenerator(RowGenerator):
+    def __init__(self, start_time, end_time, time_format='%Y-%m-%d %I:%M %p', size=1):
+        self.start_time = start_time
+        self.end_time = end_time
+        self.size = size
+        self.time_format = time_format
+
+    @staticmethod
+    def get_random_datetime(start, end, format):
+        start_time = time.mktime(time.strptime(start, format))
+        end_time = time.mktime(time.strptime(end, format))
+        return time.strftime(
+            format,
+            time.localtime(start_time + random.random() * (end_time - start_time))
+        )
+
+    def __call__(self):
+        return self.make_row(
+            DatetimeGenerator.get_random_datetime,
+            start=self.start_time,
+            end=self.end_time,
+            format=self.time_format
+        )
+
+
+@register
+class WordGenerator(RowGenerator):
+    def __init__(self, word_len: Union[str, int] = 'random', size=5):
+        self.size = size
+        self.word_len = np.random.randint(low=2, high=15) if word_len == 'random' else word_len
 
     @staticmethod
     def random_word(word_size):
         return ''.join(random.choices(string.ascii_lowercase, k=word_size))
 
     def __call__(self):
-        return [
-            WordGenerator.random_word(
-                word_size=np.random.randint(low=2, high=15)
-            ) for _ in range(self.size)
-        ] if self.word_len == 'random' else [
-            WordGenerator.random_word(
-                word_size=self.word_len
-            ) for _ in range(self.size)
-        ]
+        return self.make_row(WordGenerator.random_word, word_size=self.word_len)
 
 
-class SentenceGenerator:
-    def __init__(self, size, sentence_len: Union[str, int] = 'random'):
+@register
+class SentenceGenerator(RowGenerator):
+    def __init__(self, sentence_len: Union[str, int] = 'random', size=5):
         self.size = size
-        self.sentence_len = sentence_len
+        self.sentence_len = np.random.randint(low=2, high=15) if sentence_len == 'random' else sentence_len
 
     @staticmethod
     def random_sentence(sentence_size):
@@ -58,27 +109,14 @@ class SentenceGenerator:
             ) for _ in range(sentence_size)) + '.'
 
     def __call__(self):
-        return [
-            SentenceGenerator.random_sentence(
-                sentence_size=np.random.randint(low=2, high=15)
-            ) for _ in range(self.size)
-        ] if self.sentence_len == 'random' else [
-            SentenceGenerator.random_sentence(
-                sentence_size=self.sentence_len
-            ) for _ in range(self.size)
-        ]
+        return self.make_row(SentenceGenerator.random_sentence, sentence_size=self.sentence_len)
 
 
 class FrameGenerator:
     def __init__(
             self,
             shape,
-            generator: Union[
-                NumRowGenerator,
-                CatRowGenerator,
-                WordGenerator,
-                SentenceGenerator
-            ],
+            generator,
             name_prefix=''
     ):
         self.generator = generator
@@ -94,49 +132,31 @@ class FrameGenerator:
 
 
 class DatasetGenerator:
-    def __init__(self, row_count, numerical_params=None, cat_columns=None, word_columns=None, sentences_columns=None):
+    def __init__(self, row_count, **kwargs):
         self.row_count = row_count
         self.index = pd.Series([i for i in range(self.row_count)], name='index')
-        self.num_frames = [
-            FrameGenerator(
-                shape=[self.row_count, x.size],
-                name_prefix=f'num_type_{i}',
-                generator=x
-            ) for i, x in enumerate([NumRowGenerator(*x) for x in numerical_params])
-        ] if numerical_params else []
 
-        self.cat_frames = [
-            FrameGenerator(
-                shape=[self.row_count, x.size],
-                name_prefix=f'cat_type_{i}',
-                generator=x
-            ) for i, x in enumerate([CatRowGenerator(*x) for x in cat_columns])
-        ] if cat_columns else []
+        frame_params = {
+            generators.methods[name]: params for name, params in kwargs.items() if name in generators.methods.keys()
+        }
+        naming = dict((method, name) for name, method in generators.methods.items())
+        self.frames = []
 
-        self.word_frames = [
-            FrameGenerator(
-                shape=[self.row_count, x.size],
-                name_prefix=f'word_type_{i}',
-                generator=x
-            ) for i, x in enumerate([WordGenerator(*x) for x in word_columns])
-        ] if word_columns else []
-
-        self.sentences_frames = [
-            FrameGenerator(
-                shape=[self.row_count, x.size],
-                name_prefix=f'word_type_{i}',
-                generator=x
-            ) for i, x in enumerate([SentenceGenerator(*x) for x in sentences_columns])
-        ] if sentences_columns else []
+        for method, params in frame_params.items():
+            for i, x in enumerate([method(*param) for param in params]):
+                self.frames.append(
+                    FrameGenerator(
+                        shape=[self.row_count, x.size],
+                        name_prefix=f'{naming[method]}',
+                        generator=x
+                    )
+                )
 
     def __call__(self):
         return pd.concat(
             [
                 self.index,
-                *[frame() for frame in self.cat_frames],
-                *[frame() for frame in self.num_frames],
-                *[frame() for frame in self.word_frames],
-                *[frame() for frame in self.sentences_frames],
+                *[frame() for frame in self.frames],
             ],
             axis=1
         ).set_index('index')
