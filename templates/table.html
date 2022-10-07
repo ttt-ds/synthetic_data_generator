@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+{% if tables %}
+    {% for table in tables %}
+                {{titles[loop.index]}}
+                {{ table|safe }}
+    {% endfor %}
+<a href="/getPlotCSV">Click me.</a>
+{% endif %}
+<form action="" method="post">
+    <p>
+        <label for="rows_count">rows_count</label>
+        <input type="number" name="rows_count">
+    </p>
+    <p>
+        <label for="num_min">Min value of numerical</label>
+        <input type="number" name="num_min">
+    </p>
+    <p>
+        <label for="num_max">Max value of numerical</label>
+        <input type="number" name="num_max">
+    </p>
+    <p>
+        <label for="num_count">Count numerical rows</label>
+        <input type="number" name="num_count">
+    </p>
+    <p>
+        <input type="submit">
+    </p>
+</form>
+
+</body>
+</html>
