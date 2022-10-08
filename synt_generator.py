@@ -57,7 +57,7 @@ class RowGenerator:
 
 @register
 class DatetimeGenerator(RowGenerator):
-    def __init__(self, start_time, end_time, time_format='%Y-%m-%d %I:%M %p', size=1):
+    def __init__(self, start_time, end_time, size=1, time_format='%Y-%m-%dT%H:%M'):
         self.start_time = start_time
         self.end_time = end_time
         self.size = size

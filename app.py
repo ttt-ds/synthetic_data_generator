@@ -54,14 +54,27 @@ def table():
         num_max = int(request.form.get('num_max'))
         num_count = int(request.form.get('num_count'))
 
-        dg = DatasetGenerator(row_count=rows_count, numerical=[(num_min, num_max, num_count)])
+        date_min = str(request.form.get('date_min'))
+        date_max = str(request.form.get('date_max'))
+        datetime_count = int(request.form.get('datetime_count'))
+
+        cat_count = int(request.form.get("category"))
+        labels = [str(request.form.get(f"category_{i}")) for i in range(cat_count)]
+        categorical_count = int(request.form.get("categorical_count"))
+
+        dg = DatasetGenerator(
+            row_count=rows_count,
+            numerical=[(num_min, num_max, num_count)],
+            categorical=[(labels, categorical_count)],
+            datetime=[(date_min, date_max, datetime_count)]
+        )
 
         df = dg()
         filepath = os.path.join('uploads', 'tmp.csv')
         df.to_csv(filepath)
         send_from_directory('uploads', 'tmp.csv', as_attachment=True)
 
-    return render_template('table.html',  tables=[df.to_html(classes='data')], titles=df.columns.values)
+    return render_template('table.html',  tables=[df.head(10).to_html(classes='data')], titles=df.columns.values)
 
 
 @app.route('/uploads/<path:filename>', methods=['GET', 'POST'])

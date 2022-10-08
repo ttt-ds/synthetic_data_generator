@@ -3,6 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <script type='text/javascript'>
+        function addFields(){
+            // Generate a dynamic number of inputs
+            var number = document.getElementById("category").value;
+            // Get the element where the inputs will be added to
+            var container = document.getElementById("container");
+            // Remove every children it had before
+            while (container.hasChildNodes()) {
+                container.removeChild(container.lastChild);
+            }
+            for (i=0;i<number;i++){
+                // Append a node with a random text
+                container.appendChild(document.createTextNode("Category " + (i+1)));
+                // Create an <input> element, set its type and name attributes
+                var input = document.createElement("input");
+                input.type = "text";
+                input.name = "category_" + i;
+                input.value = i
+                container.appendChild(input);
+                // Append a line break
+                container.appendChild(document.createElement("br"));
+            }
+        }
+    </script>
 </head>
 <body>
 {% if tables %}
@@ -15,19 +39,38 @@
 <form action="" method="post">
     <p>
         <label for="rows_count">rows_count</label>
-        <input type="number" name="rows_count">
+        <input type="number" name="rows_count" value="100">
     </p>
     <p>
         <label for="num_min">Min value of numerical</label>
-        <input type="number" name="num_min">
+        <input type="number" name="num_min" value="1">
     </p>
     <p>
         <label for="num_max">Max value of numerical</label>
-        <input type="number" name="num_max">
+        <input type="number" name="num_max" value="100">
     </p>
     <p>
-        <label for="num_count">Count numerical rows</label>
-        <input type="number" name="num_count">
+        <label for="num_count">Count numerical columns</label>
+        <input type="number" name="num_count" value="1">
+    </p>
+    <div>
+        <label for="category">Count categories</label>
+        <input type="text" id="category" name="category" value="3"> <br />
+        <a href="#" id="filldetails" onclick="addFields()">add category</a>
+        <div id="container"/>
+    </div>
+    <p>
+        <label for="num_count">Count categorical columns</label>
+        <input type="number" name="categorical_count" value="1">
+    </p>
+    <p>
+        <label for="date">Datetime range</label>
+        <input type="datetime-local" name="date_min">
+        <input type="datetime-local" name="date_max">
+    </p>
+    <p>
+        <label for="num_count">Count datetime columns</label>
+        <input type="number" name="datetime_count" value="1">
     </p>
     <p>
         <input type="submit">
