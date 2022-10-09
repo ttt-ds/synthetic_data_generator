@@ -14,11 +14,6 @@ app = Flask(__name__)
 dg = DatasetGenerator(row_count=100, numerical=[(1, 100,2)], categorical=[(['a','b','c'], 2)], word=[[5,1]], sentence=[[5,1]],datetime=[('2020-02-08 01:00 pm', '2022-01-01 01:00 pm')])
 Bootstrap(app)
 
-@app.route('/', methods=("POST", "GET"))
-def html_table():
-    df = dg()
-    return render_template('simple.html',  tables=[df.to_html(classes='data')], titles=df.columns.values)
-
 
 @app.route('/create/', methods=['post', 'get'])
 def login():
@@ -45,7 +40,8 @@ def getPlotCSV():
         headers={"Content-disposition":
                  "attachment; filename=myplot.csv"})
 
-@app.route('/table', methods=['post', 'get'])
+
+@app.route('/', methods=['post', 'get'])
 def table():
     df = pd.DataFrame()
     if request.method == 'POST':
@@ -58,6 +54,12 @@ def table():
         date_max = str(request.form.get('date_max'))
         datetime_count = int(request.form.get('datetime_count'))
 
+        word_len = int(request.form.get('word_len'))
+        word_count = int(request.form.get('word_count'))
+
+        sentence_len = int(request.form.get('sentence_len'))
+        sentence_count = int(request.form.get('sentence_count'))
+
         cat_count = int(request.form.get("category"))
         labels = [str(request.form.get(f"category_{i}")) for i in range(cat_count)]
         categorical_count = int(request.form.get("categorical_count"))
@@ -66,7 +68,9 @@ def table():
             row_count=rows_count,
             numerical=[(num_min, num_max, num_count)],
             categorical=[(labels, categorical_count)],
-            datetime=[(date_min, date_max, datetime_count)]
+            datetime=[(date_min, date_max, datetime_count)],
+            word=[[word_len, word_count]],
+            sentence=[[sentence_len, sentence_count]]
         )
 
         df = dg()
